@@ -19,6 +19,18 @@ def get_linear_logits(sparse_feature, dense_feature):
 
 def model_fn(features, labels, mode, params):
 
+    """
+    :param features: input_fn 得到的feature
+    :param labels: labels
+    :param mode: 当前模式：分为训练、验证、预测
+    :param params: 模型的其他参数
+    :return: estimator(推算器)
+    """
+
+    """
+        输入feature & 配置的读取
+    """
+
     # 获取 feature tensor
     # 1. 对于 sparse_feature 存储的是index
     # 2. 对于 dense_feature 存储的是具体的值
@@ -36,7 +48,6 @@ def model_fn(features, labels, mode, params):
 
     # 获取 sparse、dense feature 配置
     sparse_feature_columns = params['sparse_feature_columns']
-    dense_feature_columns = params['dense_feature_columns']
 
     """
         DNN part
@@ -64,8 +75,6 @@ def model_fn(features, labels, mode, params):
 
     logits = tf.add_n([dnn_logits, lr_logits])
 
-    print("logits", logits)
-
     logits = tf.squeeze(logits, axis=1)
 
     pred = tf.sigmoid(logits)
@@ -75,6 +84,10 @@ def model_fn(features, labels, mode, params):
     export_outputs = {
         tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: tf.estimator.export.PredictOutput(
             predictions)}
+
+    """
+        train & eval & predict
+    """
 
     if mode == tf.estimator.ModeKeys.PREDICT:
         return tf.estimator.EstimatorSpec(

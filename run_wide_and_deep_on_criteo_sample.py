@@ -39,11 +39,11 @@ def main(_):
     eval_dense_features = dense_features[train_size:]
     eval_label = label[train_size:]
 
-    # 指定 wide & deep 模型的训练
+    # 指定 wide & deep 模型的 wide部分和deep部分所需要的feature
     linear_feature_names = [each.name for each in sparse_feature_columns] + [each.name for each in dense_feature_columns]
     dnn_feature_names =  [each.name for each in sparse_feature_columns]
 
-    # 处理model
+    # 处理model params
     model_params = {
         "sparse_feature_columns": sparse_feature_columns,
         "dense_feature_columns": dense_feature_columns,

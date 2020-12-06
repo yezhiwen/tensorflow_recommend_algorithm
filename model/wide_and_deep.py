@@ -6,59 +6,64 @@ introduction :
 -------------------------------------
 """
 
-from tensorflow.python.keras.layers import Embedding
-from tensorflow.python.keras.regularizers import l2
-from tensorflow.python.keras.initializers import RandomNormal
+
 import tensorflow as tf
 from layer import common_layer
 from metrics import metrics
+from util import model_util
 
-def creative_sparse_embedding_dict(sparse_feature_columns, l2_reg_embedding=0.00001, init_std=0.0001, seed=1024):
-    sparse_embedding_dict = {feat.embedding_name:
-                             Embedding(
-                                 feat.vocabulary_size,
-                                 feat.embedding_dim,
-                                 embeddings_initializer=RandomNormal( mean=0.0, stddev=init_std, seed=seed),
-                                 embeddings_regularizer=l2(l2_reg_embedding),
-                                 name='emb_' + feat.embedding_name
-                             )
-                        for feat in sparse_feature_columns}
-    return sparse_embedding_dict
+def get_linear_logits(sparse_feature, dense_feature):
+    linear_logit_list = []
 
-
-def sparse_embedding_lookup(sparse_embedding_dict, sparse_features):
-    embeddings = []
-    for feature_name in sparse_features:
-        lookup_idx = sparse_features[feature_name]
-        embeddings.append(sparse_embedding_dict[feature_name](lookup_idx))
-    return embeddings
 
 
 def model_fn(features, labels, mode, params):
 
+    # 获取 feature tensor
+    # 1. 对于 sparse_feature 存储的是index
+    # 2. 对于 dense_feature 存储的是具体的值
+    sparse_features_input = features['sparse_features']
+    dense_features_input = features['dense_features']
+
     # 获取基本配置
     batch_size = params['batch_size']
     lr = params['lr']
+    embedding_size = params['embedding_size']
 
+    # 获取需要进入 linear和nn部分的feature name
+    linear_feature_names = params['linear_feature_names']
+    dnn_feature_names = params['dnn_feature_names']
 
-    # 获取 feature 配置
+    # 获取 sparse、dense feature 配置
     sparse_feature_columns = params['sparse_feature_columns']
     dense_feature_columns = params['dense_feature_columns']
 
+    """
+        DNN part
+    """
     # 创建 sparse feature embedding
-    sparse_embedding_dict = creative_sparse_embedding_dict(sparse_feature_columns)
+    sparse_embeddings = model_util.get_feature_embeddings(
+        sparse_feature_columns,
+        dict([(feature_name, input) for feature_name, input in sparse_features_input.items() if feature_name in dnn_feature_names]),
+        embedding_size=embedding_size
+    )
 
-    # 获取 feature tensor
-    sparse_features = features['sparse_features']
-    dense_features = features['dense_features']
-    dense_features = [tf.expand_dims(value, axis=1) for key,value in dense_features.items()]
-
-    # 获取embeddings
-    sparse_embeddings = sparse_embedding_lookup(sparse_embedding_dict, sparse_features)
-    sparse_embeddings.extend(dense_features)
-
+    # embeding concat + dnn
     concat_embeddings = tf.concat(sparse_embeddings, axis=1)
-    logits = common_layer.get_nn_layers(concat_embeddings, dims=[1])
+    dnn_logits = common_layer.get_nn_layers(concat_embeddings, dims=[128, 32, 1])
+
+    """
+        Linear part
+    """
+
+    lr_logits = model_util.get_linear_logits(
+        sparse_feature_columns,
+        dict([(feature_name, input) for feature_name, input in sparse_features_input.items() if feature_name in linear_feature_names]),
+        dict([(feature_name, input) for feature_name, input in dense_features_input.items() if feature_name in linear_feature_names])
+    )
+
+    logits = tf.add_n([dnn_logits, lr_logits])
+
     print("logits", logits)
 
     logits = tf.squeeze(logits, axis=1)
@@ -78,7 +83,6 @@ def model_fn(features, labels, mode, params):
             export_outputs=export_outputs)
 
     else:
-
         # 定义loss
         loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=labels)
         loss = tf.reduce_sum(loss)

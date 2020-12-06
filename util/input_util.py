@@ -71,8 +71,8 @@ def input_fn(sparse_features, dense_features, label, batch_size=64, shuffle_size
     # sparse_features, dense_features, sparse_feature_columns, dense_feature_columns, label = load_criteo_data(path)
 
     # 原始数据转tensor
-    sparse_features =  dict([(key, tf.convert_to_tensor(sparse_features[key].values))for key in sparse_features.keys()])
-    dense_features = dict([(key, tf.convert_to_tensor(dense_features[key].values)) for key in dense_features.keys()])
+    sparse_features =  dict([(key, tf.convert_to_tensor(sparse_features[key].values, dtype=tf.float32))for key in sparse_features.keys()])
+    dense_features = dict([(key, tf.convert_to_tensor(dense_features[key].values, dtype=tf.float32)) for key in dense_features.keys()])
     label = tf.convert_to_tensor(label.values, dtype=tf.float32)
 
     def parse_data(data):

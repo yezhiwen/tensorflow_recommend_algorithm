@@ -8,7 +8,8 @@ introduction :
 
 import tensorflow as tf
 from util import input_util, model_util
-from model import MLP
+from model.wide_and_deep import model_fn
+from util.input_util import input_fn
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string("model_dir", 'save_model/MLP', 'model_dir')
@@ -19,8 +20,6 @@ tf.app.flags.DEFINE_integer("batch_size", 256, 'batch_size')
 
 
 def main(_):
-    input_fn = input_util.input_fn
-    model_fn = MLP.model_fn
 
     # 处理输入
     path = "data/criteo_sample.txt"
@@ -35,11 +34,17 @@ def main(_):
     eval_dense_features = dense_features[train_size:]
     eval_label = label[train_size:]
 
+    linear_feature_names = [each.name for each in sparse_feature_columns] + [each.name for each in dense_feature_columns]
+    dnn_feature_names =  [each.name for each in sparse_feature_columns]
+
     # 处理model
     model_params = {
         "sparse_feature_columns": sparse_feature_columns,
         "dense_feature_columns": dense_feature_columns,
         "batch_size": FLAGS.batch_size,
+        "embedding_size": 8,
+        "linear_feature_names": linear_feature_names,
+        "dnn_feature_names": dnn_feature_names,
         "lr": 0.01
     }
 

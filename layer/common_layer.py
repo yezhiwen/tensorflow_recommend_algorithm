@@ -25,5 +25,3 @@ def get_nn_layers(input_layer, dims, activate_fuc='relu', dropout=0.1):
     return layer
 
 
-def get_logits(sparse_feature, dense_feature):
-    pass

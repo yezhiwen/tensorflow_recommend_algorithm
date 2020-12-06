@@ -21,8 +21,13 @@ tf.app.flags.DEFINE_integer("batch_size", 256, 'batch_size')
 
 def main(_):
 
-    # 处理输入
+    """
+        数据输入部分
+    """
+    # 数据集路径
     path = "data/criteo_sample.txt"
+
+    # 加载数据集
     sparse_features, dense_features, sparse_feature_columns, dense_feature_columns, label = input_util.load_criteo_data(path, sep='\t')
 
     # 划分训练集 & 验证集
@@ -34,6 +39,7 @@ def main(_):
     eval_dense_features = dense_features[train_size:]
     eval_label = label[train_size:]
 
+    # 指定 wide & deep 模型的训练
     linear_feature_names = [each.name for each in sparse_feature_columns] + [each.name for each in dense_feature_columns]
     dnn_feature_names =  [each.name for each in sparse_feature_columns]
 

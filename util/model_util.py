@@ -32,15 +32,15 @@ def creative_sparse_embedding_dict(sparse_feature_columns, feature_names, embedd
     :param seed: 种子
     :return: {"embedding_name": Embedding, ......}
     """
-    sparse_embedding_dict = {feat.embedding_name:
+    sparse_embedding_dict = {feat.name:
                              Embedding(
                                  feat.vocabulary_size,
                                  embedding_size,
                                  embeddings_initializer=RandomNormal(mean=0.0, stddev=init_std, seed=seed),
                                  embeddings_regularizer=l2(l2_reg_embedding),
-                                 name='emb_' + feat.embedding_name
+                                 name='emb_' + feat.name
                              )
-                        for feat in sparse_feature_columns if feat.embedding_name in feature_names}
+                        for feat in sparse_feature_columns if feat.name in feature_names}
     return sparse_embedding_dict
 
 def sparse_embedding_lookup(sparse_embedding_dict, sparse_features_input):

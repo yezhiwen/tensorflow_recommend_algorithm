@@ -32,9 +32,9 @@ def load_criteo_data(path, sep=','):
 
     # 封装好特征
     sparse_feature_columns = [
-        SparseFeat(feat, vocabulary_size=data[feat].nunique(), embedding_dim=4) for i, feat in enumerate(sparse_features)
+        SparseFeat(feat, vocabulary_size=data[feat].nunique()) for i, feat in enumerate(sparse_features)
     ]
-    dense_feature_columns = [DenseFeat(feat, 1,) for feat in dense_features]
+    dense_feature_columns = [DenseFeat(feat) for feat in dense_features]
 
     return data[sparse_features], data[dense_features], sparse_feature_columns, dense_feature_columns, data['label']
 

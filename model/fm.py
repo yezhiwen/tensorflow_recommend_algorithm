@@ -2,15 +2,17 @@
 """
 -------------------------------------
 author : yezhiwen.buaa
-introduction : Wide & Deep
+introduction : FM
 -------------------------------------
 """
 
 
 import tensorflow as tf
 from layer import common_layer
+from layer import layers
 from metrics import metrics
 from util import model_util
+
 
 def model_fn(features, labels, mode, params):
 
@@ -30,7 +32,6 @@ def model_fn(features, labels, mode, params):
     # 1. 对于 sparse_feature 存储的是index
     # 2. 对于 dense_feature 存储的是具体的值
     sparse_features_input = features['sparse_features']
-    dense_features_input = features['dense_features']
 
     # 获取基本配置
     batch_size = params['batch_size']
@@ -38,14 +39,13 @@ def model_fn(features, labels, mode, params):
     embedding_size = params['embedding_size']
 
     # 获取需要进入 linear和nn部分的feature name
-    linear_feature_names = params['linear_feature_names']
     dnn_feature_names = params['dnn_feature_names']
 
     # 获取 sparse、dense feature 配置
     sparse_feature_columns = params['sparse_feature_columns']
 
     """
-        DNN part
+        Embedding part
     """
     # 创建 sparse feature embedding
     sparse_embeddings = model_util.get_feature_embeddings(
@@ -54,21 +54,10 @@ def model_fn(features, labels, mode, params):
         embedding_size=embedding_size
     )
 
-    # embeding concat + dnn
-    concat_embeddings = tf.concat(sparse_embeddings, axis=1)
-    dnn_logits = common_layer.get_nn_layers(concat_embeddings, dims=[128, 32, 1])
+    sparse_embeddings = [tf.expand_dims(embedding, axis=1) for embedding in sparse_embeddings]
+    sparse_embeddings = tf.concat(sparse_embeddings, axis=1)
 
-    """
-        Linear part
-    """
-
-    lr_logits = model_util.get_linear_logits(
-        sparse_feature_columns,
-        dict([(feature_name, input) for feature_name, input in sparse_features_input.items() if feature_name in linear_feature_names]),
-        dict([(feature_name, input) for feature_name, input in dense_features_input.items() if feature_name in linear_feature_names])
-    )
-
-    logits = tf.add_n([dnn_logits, lr_logits])
+    logits = layers.FM()(sparse_embeddings)
 
     logits = tf.squeeze(logits, axis=1)
 

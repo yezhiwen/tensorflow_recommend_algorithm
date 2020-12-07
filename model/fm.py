@@ -8,7 +8,6 @@ introduction : FM
 
 
 import tensorflow as tf
-from layer import common_layer
 from layer import layers
 from metrics import metrics
 from util import model_util
@@ -21,7 +20,7 @@ def model_fn(features, labels, mode, params):
     :param labels: labels
     :param mode: 当前模式：分为训练、验证、预测
     :param params: 模型的其他参数
-    :return: estimator(推算器)
+    :return: estimator
     """
 
     """
@@ -38,10 +37,7 @@ def model_fn(features, labels, mode, params):
     lr = params['lr']
     embedding_size = params['embedding_size']
 
-    # 获取需要进入 linear和nn部分的feature name
-    dnn_feature_names = params['dnn_feature_names']
-
-    # 获取 sparse、dense feature 配置
+    # 获取 sparse feature 配置
     sparse_feature_columns = params['sparse_feature_columns']
 
     """
@@ -50,13 +46,16 @@ def model_fn(features, labels, mode, params):
     # 创建 sparse feature embedding
     sparse_embeddings = model_util.get_feature_embeddings(
         sparse_feature_columns,
-        dict([(feature_name, input) for feature_name, input in sparse_features_input.items() if feature_name in dnn_feature_names]),
+        dict([(feature_name, input) for feature_name, input in sparse_features_input.items()]),
         embedding_size=embedding_size
     )
 
     sparse_embeddings = [tf.expand_dims(embedding, axis=1) for embedding in sparse_embeddings]
     sparse_embeddings = tf.concat(sparse_embeddings, axis=1)
 
+    """
+        FM part
+    """
     logits = layers.FM()(sparse_embeddings)
 
     logits = tf.squeeze(logits, axis=1)

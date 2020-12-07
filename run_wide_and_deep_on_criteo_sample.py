@@ -12,7 +12,7 @@ from model.wide_and_deep import model_fn
 from util.input_util import input_fn
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string("model_dir", 'save_model/MLP', 'model_dir')
+tf.app.flags.DEFINE_string("model_dir", 'save_model/wide_and_deep', 'model_dir')
 tf.app.flags.DEFINE_integer("train", 1, 'train mode')
 tf.app.flags.DEFINE_integer("eval", 1, 'eval mode')
 tf.app.flags.DEFINE_integer("epoch", 1, 'epoch')

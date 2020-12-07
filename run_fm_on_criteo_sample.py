@@ -12,7 +12,7 @@ from model.fm import model_fn
 from util.input_util import input_fn
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string("model_dir", 'save_model/MLP', 'model_dir')
+tf.app.flags.DEFINE_string("model_dir", 'save_model/FM', 'model_dir')
 tf.app.flags.DEFINE_integer("train", 1, 'train mode')
 tf.app.flags.DEFINE_integer("eval", 1, 'eval mode')
 tf.app.flags.DEFINE_integer("epoch", 1, 'epoch')
@@ -46,11 +46,8 @@ def main(_):
     # 处理model params
     model_params = {
         "sparse_feature_columns": sparse_feature_columns,
-        "dense_feature_columns": dense_feature_columns,
         "batch_size": FLAGS.batch_size,
         "embedding_size": 8,
-        "linear_feature_names": linear_feature_names,
-        "dnn_feature_names": dnn_feature_names,
         "lr": 0.01
     }
 

@@ -61,7 +61,6 @@ class Linear(tf.keras.layers.Layer):
 
         return linear_logit
 
-
 class FM(tf.keras.layers.Layer):
 
     """
@@ -104,31 +103,7 @@ class FM(tf.keras.layers.Layer):
 
         return cross_term
 
-
 class MMoE(tf.keras.layers.Layer):
-    '''
-    @param units MMoE隐藏层单元数
-    @param num_experts MMoE专家数
-    @param num_tasks 下游任务数
-    @param use_expert_bias 是否用用expert的bias
-    @param use_gate_bias 是否用用gat的bias
-    @param expert_activation expert的激活函数
-    @param gate_activation gated的激活函数
-    @param expert_bias_initializer expert bias的初始化函数
-    @param gate_bias_initializer gate bias的初始化函数
-    @param expert_bias_regularizer expert bias的正则化方式
-    @param gate_bias_regularizer gate bias的正则化方式
-    @param expert_bias_constraint expert bias的约束
-    @param gate_bias_constraint gate bias的约束
-    @param expert_kernel_initializer expert权重初始化
-    @param gate_kernel_initializer gate权重初始化
-    @param expert_kernel_regularizer expert权重正则化
-    @param gate_kernel_regularizer gate权重正则化
-    @param expert_kernel_constraint expert权重约束
-    @param gate_kernel_constraint gate权重约束
-    @param activity_regularizery activate正则化函数
-    @param kwargs Layer类附加参数
-    '''
 
     def __init__(self, units, num_experts, num_tasks,
                  use_expert_bias=True, use_gate_bias=True, expert_activation='relu', gate_activation='softmax',
@@ -223,3 +198,77 @@ class MMoE(tf.keras.layers.Layer):
 
         # [(batch_size, units), ......]   size: num_task
         return final_outputs
+
+class AFM(tf.keras.layers.Layer):
+
+    def __init__(self, embedding_size, attention_size, l2_reg=0.0, **kwargs):
+
+        self.embedding_size = embedding_size
+        self.attention_size = attention_size
+        self.l2_reg = l2_reg
+
+        super(AFM, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+
+        self.attention_w = self.add_weight(
+                'attention_w',
+                shape=[self.embedding_size, self.attention_size],
+                initializer=tf.keras.initializers.glorot_normal(),
+                regularizer=tf.keras.regularizers.l2(self.l2_reg),
+                trainable=True)
+
+        self.attention_b = self.add_weight(
+            'attention_b',
+            shape=[self.attention_size],
+            initializer=tf.keras.initializers.glorot_normal(),
+            regularizer=tf.keras.regularizers.l2(self.l2_reg),
+            trainable=True)
+
+        self.attention_h = self.add_weight(
+            'attention_h',
+            shape=[self.attention_size],
+            initializer=tf.keras.initializers.glorot_normal(),
+            regularizer=tf.keras.regularizers.l2(self.l2_reg),
+            trainable=True)
+
+        self.attention_p = self.add_weight(
+            'attention_p',
+            shape=[self.embedding_size],
+            initializer=tf.keras.initializers.glorot_normal(),
+            regularizer=tf.keras.regularizers.l2(self.l2_reg),
+            trainable=True)
+
+    def call(self, inputs, **kwargs):
+
+        # [(batch_size, embedding_size), ......]   size: feature_size
+        embedding_list = inputs
+
+        cross_embeddings = []
+        for i in range(len(embedding_list)-1):
+            for j in range(len(embedding_list)):
+                cross_embedding = tf.multiply(embedding_list[i], embedding_list[j])
+                cross_embeddings.append(cross_embedding)
+
+        # (feature_size(feature_size - 1)/2, batch_size, embedding_size)
+        cross_embeddings = tf.stack(cross_embeddings)
+
+        # (batch_size, feature_size(feature_size - 1)/2, embedding_size)
+        cross_embeddings = tf.transpose(cross_embeddings, perm=[1, 0, 2])
+
+        # (batch_size, feature_size(feature_size - 1)/2, attention_size)
+        attention_weight = tf.add(tf.matmul(cross_embeddings, self.attention_w), self.attention_b)
+
+        # (batch_size, feature_size(feature_size - 1)/2)
+        attention_a = tf.nn.softmax(tf.reduce_sum(tf.multiply(tf.nn.relu(attention_weight), self.attention_h), axis=2))
+
+        # (batch_size, feature_size(feature_size - 1)/2, 1)
+        attention_out = tf.expand_dims(attention_a, axis=2)
+
+        # (batch_size, embedding_size)
+        attention_out = tf.reduce_sum(tf.multiply(cross_embeddings, attention_out), axis=1)
+
+        # (batch_size, 1)
+        attention_out = tf.reduce_sum(tf.multiply(attention_out, self.attention_p), axis=1, keepdims=True)
+
+        return attention_out

@@ -36,13 +36,18 @@ def model_fn(features, labels, mode, params):
     batch_size = params['batch_size']
     lr = params['lr']
     embedding_size = params['embedding_size']
+    attention_size = params['attention_size']
 
     # 获取 sparse feature 配置
     sparse_feature_columns = params['sparse_feature_columns']
 
-    """
-        Embedding part
-    """
+    # 获取线性部分logits
+    linear_logits = model_util.get_linear_logits(
+        sparse_feature_columns=sparse_feature_columns,
+        sparse_features_input=dict([(feature_name, input) for feature_name, input in sparse_features_input.items()]),
+        dense_features_input=dict()
+    )
+
     # 创建 sparse feature embedding
     sparse_embeddings = model_util.get_feature_embeddings(
         sparse_feature_columns,
@@ -50,13 +55,14 @@ def model_fn(features, labels, mode, params):
         embedding_size=embedding_size
     )
 
-    sparse_embeddings = [tf.expand_dims(embedding, axis=1) for embedding in sparse_embeddings]
-    sparse_embeddings = tf.concat(sparse_embeddings, axis=1)
+    # sparse_embeddings = [tf.expand_dims(embedding, axis=1) for embedding in sparse_embeddings]
+    # sparse_embeddings = tf.concat(sparse_embeddings, axis=1)
 
-    """
-        FM part
-    """
-    logits = layers.FM()(sparse_embeddings)
+    # 获取 AFM logits
+
+    afm_logits = layers.AFM(embedding_size=embedding_size, attention_size=attention_size)(sparse_embeddings)
+
+    logits = tf.add_n([linear_logits, afm_logits])
 
     logits = tf.squeeze(logits, axis=1)
 

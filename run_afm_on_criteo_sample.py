@@ -2,7 +2,7 @@
 """
 -------------------------------------
 author : yezhiwen.buaa
-introduction : 
+introduction : AFM
 -------------------------------------
 """
 
@@ -12,7 +12,7 @@ from model.afm import model_fn
 from util.input_util import input_fn
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string("model_dir", 'save_model/FM', 'model_dir')
+tf.app.flags.DEFINE_string("model_dir", 'save_model/AFM', 'model_dir')
 tf.app.flags.DEFINE_integer("train", 1, 'train mode')
 tf.app.flags.DEFINE_integer("eval", 1, 'eval mode')
 tf.app.flags.DEFINE_integer("epoch", 1, 'epoch')
@@ -48,6 +48,7 @@ def main(_):
         "sparse_feature_columns": sparse_feature_columns,
         "batch_size": FLAGS.batch_size,
         "embedding_size": 8,
+        "attention_size": 4,
         "lr": 0.01
     }
 

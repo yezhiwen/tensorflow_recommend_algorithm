@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-# 定义Reckon训练看板指标
 
 import sys
 import numpy as np

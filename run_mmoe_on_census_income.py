@@ -2,7 +2,7 @@
 """
 -------------------------------------
 author : yezhiwen.buaa
-introduction : 
+introduction : MMoE
 -------------------------------------
 """
 

@@ -2,7 +2,7 @@
 """
 -------------------------------------
 author : yezhiwen.buaa
-introduction : Wide & Deep
+introduction : MMoE
 -------------------------------------
 """
 
@@ -37,24 +37,23 @@ def model_fn(features, labels, mode, params):
     embedding_size = params['embedding_size']
     task_nums = params['task_nums']
 
-    # 获取 sparse、dense feature 配置
+    # 获取 sparse feature 配置
     sparse_feature_columns = params['sparse_feature_columns']
 
-
-    """
-        embedding part
-    """
-    # 创建 sparse feature embedding
+    # 获取 sparse feature embedding
     sparse_embeddings = model_util.get_feature_embeddings(
         sparse_feature_columns,
         dict([(feature_name, input) for feature_name, input in sparse_features_input.items()]),
         embedding_size=embedding_size
     )
 
+    # 将sparse feature concat起来
     concat_embeddings = tf.concat(sparse_embeddings, axis=1)
 
+    # MMoE layer
     mmoe_layers = layers.MMoE(units=4, num_experts=8, num_tasks=task_nums)(concat_embeddings)
 
+    # 分别处理不同 Task Tower
     logits = []
     for index, task_layer in enumerate(mmoe_layers):
 

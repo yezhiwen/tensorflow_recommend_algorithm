@@ -40,13 +40,9 @@ def model_fn(features, labels, mode, params):
     # 获取 sparse feature 配置
     sparse_feature_columns = params['sparse_feature_columns']
 
-    # 获取线性部分logits
-    linear_logits = model_util.get_linear_logits(
-        sparse_feature_columns = sparse_feature_columns,
-        sparse_features_input = dict([(feature_name, input) for feature_name, input in sparse_features_input.items()]),
-        dense_features_input = dict()
-    )
-
+    """
+        Embedding part
+    """
     # 创建 sparse feature embedding
     sparse_embeddings = model_util.get_feature_embeddings(
         sparse_feature_columns,
@@ -57,10 +53,10 @@ def model_fn(features, labels, mode, params):
     sparse_embeddings = [tf.expand_dims(embedding, axis=1) for embedding in sparse_embeddings]
     sparse_embeddings = tf.concat(sparse_embeddings, axis=1)
 
-    # 获取 fm交叉部分logits
-    fm_logits = layers.FM()(sparse_embeddings)
-
-    logits = tf.add_n([fm_logits, linear_logits])
+    """
+        FM part
+    """
+    logits = layers.FM()(sparse_embeddings)
 
     logits = tf.squeeze(logits, axis=1)
 

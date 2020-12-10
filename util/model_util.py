@@ -85,11 +85,11 @@ def get_linear_logits(sparse_feature_columns, sparse_features_input, dense_featu
     elif len(sparse_feature_bias)>0:
         # 只有 sparse feature
         sparse_concat = tf.concat(sparse_feature_bias, axis=1)
-        linear_logit = Linear(l2_reg, mode=2, use_bias=use_bias)(sparse_concat)
+        linear_logit = Linear(l2_reg, mode=0, use_bias=use_bias)(sparse_concat)
     elif len(dense_feature_bias)>0:
         # 只有 dense feature
         dense_concat = tf.concat(dense_feature_bias, axis=1)
-        linear_logit = Linear(l2_reg, mode=2, use_bias=use_bias)(dense_concat)
+        linear_logit = Linear(l2_reg, mode=1, use_bias=use_bias)(dense_concat)
     else:
         raise Exception("No input for linear layer !")
 

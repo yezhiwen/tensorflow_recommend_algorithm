@@ -55,9 +55,6 @@ def model_fn(features, labels, mode, params):
         embedding_size=embedding_size
     )
 
-    # sparse_embeddings = [tf.expand_dims(embedding, axis=1) for embedding in sparse_embeddings]
-    # sparse_embeddings = tf.concat(sparse_embeddings, axis=1)
-
     # 获取 AFM logits
 
     afm_logits = layers.AFM(embedding_size=embedding_size, attention_size=attention_size)(sparse_embeddings)

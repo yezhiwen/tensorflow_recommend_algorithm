@@ -287,11 +287,12 @@ class AFM(tf.keras.layers.Layer):
 
 class PNN(tf.keras.layers.Layer):
 
-    def __init__(self, mode, embedding_size, num_pairs, **kwargs):
+    def __init__(self, mode, embedding_size, num_pairs, num_embeddings, **kwargs):
 
         # 指定是 IPNN or OPNN
         self.mode = mode
 
+        self.num_embeddings = num_embeddings
         self.num_pairs = num_pairs
         self.embedding_size = embedding_size
 
@@ -320,8 +321,8 @@ class PNN(tf.keras.layers.Layer):
             col = []
             num_inputs = len(embeddings)
 
-            for i in range(num_inputs - 1):
-                for j in range(i + 1, num_inputs):
+            for i in range(self.num_embeddings - 1):
+                for j in range(i + 1, self.num_embeddings):
                     row.append(i)
                     col.append(j)
 
@@ -348,15 +349,11 @@ class PNN(tf.keras.layers.Layer):
             # batch_size, feature_size, embedding_size
             embeddings = tf.concat(embeddings, axis=1)
 
-            # (batch_size * num_pairs * embedding_size)
-            #   * (batch * embedding_size * num_pairs)
-            #       * (batch * embedding_size * embedding_size)
-
             row = []
             col = []
 
-            for i in range(self.fieldSize - 1):
-                for j in range(i + 1, self.fieldSize):
+            for i in range(self.num_embeddings - 1):
+                for j in range(i + 1, self.num_embeddings):
                     row.append(i)
                     col.append(j)
 
@@ -372,7 +369,7 @@ class PNN(tf.keras.layers.Layer):
             # batch_size, num_pairs, embedding_size
             q = tf.transpose(
                 tf.gather(
-                    tf.transpose(self.embeddings, [1, 0, 2]),
+                    tf.transpose(embeddings, [1, 0, 2]),
                     col),
                 [1, 0, 2])
 

@@ -54,7 +54,9 @@ def model_fn(features, labels, mode, params):
     z_part = tf.concat(sparse_embeddings, axis=1)
 
     num_pairs = int(len(sparse_embeddings)*(len(sparse_embeddings)-1)/2)
-    p_part = layers.PNN(mode=0, embedding_size=embedding_size, num_pairs=num_pairs)(sparse_embeddings)
+    p_part = layers.PNN(
+        mode=0, embedding_size=embedding_size, num_pairs=num_pairs, num_embeddings=len(sparse_embeddings)
+    )(sparse_embeddings)
 
     concat_embedding = tf.concat([z_part, p_part], axis=1)
 

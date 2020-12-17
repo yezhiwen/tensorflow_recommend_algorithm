@@ -8,6 +8,18 @@ introduction :
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
+class Example(tf.keras.layers.Layer):
+
+    def __init__(self, **kwargs):
+
+        super(Example, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        pass
+
+    def call(self, inputs, **kwargs):
+        pass
+
 class Linear(tf.keras.layers.Layer):
 
     def __init__(self, l2_reg=0.0, mode=0, use_bias=False, **kwargs):
@@ -272,3 +284,122 @@ class AFM(tf.keras.layers.Layer):
         attention_out = tf.reduce_sum(tf.multiply(attention_out, self.attention_p), axis=1, keepdims=True)
 
         return attention_out
+
+class PNN(tf.keras.layers.Layer):
+
+    def __init__(self, mode, embedding_size, num_pairs, **kwargs):
+
+        # 指定是 IPNN or OPNN
+        self.mode = mode
+
+        self.num_pairs = num_pairs
+        self.embedding_size = embedding_size
+
+        super(PNN, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        self.opnn_weight = self.add_weight(
+                'opnn_weight',
+                shape=[self.embedding_size, self.num_pairs, self.embedding_size],
+                initializer=tf.keras.initializers.glorot_normal(),
+                trainable=True
+        )
+
+    def call(self, inputs, **kwargs):
+
+        embeddings = inputs
+
+        if self.mode == 0:
+            """
+                IPNN
+            """
+            # embedding: (batch_size, embedding_size) -> (batch_size, 1, embedding_size)
+            embeddings = [tf.expand_dims(embedding, axis=1) for embedding in embeddings]
+
+            row = []
+            col = []
+            num_inputs = len(embeddings)
+
+            for i in range(num_inputs - 1):
+                for j in range(i + 1, num_inputs):
+                    row.append(i)
+                    col.append(j)
+
+            # batch_size num_pairs embedding_size
+            p = tf.concat([embeddings[idx] for idx in row], axis=1)
+            q = tf.concat([embeddings[idx] for idx in col], axis=1)
+
+            # batch_size num_pairs embedding_size
+            inner_product = p * q
+
+            # batch_size num_pairs
+            inner_product = tf.reduce_sum(inner_product, axis=-1)
+
+            return inner_product
+
+        elif self.mode == 1:
+            """
+                OPNN
+            """
+
+            # embedding: (batch_size, embedding_size) -> (batch_size, 1, embedding_size)
+            embeddings = [tf.expand_dims(embedding, axis=1) for embedding in embeddings]
+
+            # batch_size, feature_size, embedding_size
+            embeddings = tf.concat(embeddings, axis=1)
+
+            # (batch_size * num_pairs * embedding_size)
+            #   * (batch * embedding_size * num_pairs)
+            #       * (batch * embedding_size * embedding_size)
+
+            row = []
+            col = []
+
+            for i in range(self.fieldSize - 1):
+                for j in range(i + 1, self.fieldSize):
+                    row.append(i)
+                    col.append(j)
+
+            # batch_size, num_pairs, embedding_size
+            p = tf.transpose(
+                # num_pairs, batch_size, embedding_size
+                tf.gather(
+                    # feature_size, batch_size, embedding_size
+                    tf.transpose(embeddings, [1, 0, 2]),
+                    row),
+                [1, 0, 2])
+
+            # batch_size, num_pairs, embedding_size
+            q = tf.transpose(
+                tf.gather(
+                    tf.transpose(self.embeddings, [1, 0, 2]),
+                    col),
+                [1, 0, 2])
+
+            # batch_size * 1 * num_pairs * embedding_size
+            p = tf.expand_dims(p, axis=1)
+
+            # batch_size * num_pairs
+            outer_product = tf.reduce_sum(
+                # batch_size * num_pairs * embedding_size
+                tf.multiply(
+                    # batch_size * num_pairs * embedding_size
+                    tf.transpose(
+                        # batch_size * embedding_size * num_pairs
+                        tf.reduce_sum(
+                            # (batch_size * 1 * num_pairs * embedding_size)
+                            # * (embedding_size * num_pairs * embedding_size)
+                            # -> batch_size * embedding_size * num_pairs * embedding_size
+                            tf.multiply(p, self.opnn_weight),
+                            axis=-1),
+                        [0, 2, 1]),
+                    q),
+                axis=-1)
+
+            return outer_product
+
+        else:
+            raise Exception("PNN mode is not in [0, 1]")
+
+
+

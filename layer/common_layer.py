@@ -7,7 +7,7 @@ introduction :
 """
 import tensorflow as tf
 
-def get_nn_layers(input_layer, dims, activate_fuc='relu', dropout=0.1):
+def get_nn_layers(input_layer, dims, activate_fuc='relu', dropout=0):
 
     layer = input_layer
     for units in dims[0:-1]:

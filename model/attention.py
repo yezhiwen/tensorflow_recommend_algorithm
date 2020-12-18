@@ -57,7 +57,7 @@ def model_fn(features, labels, mode, params):
 
     # 获取 attention logits
     feature_size = len(sparse_embeddings)
-    num_head = 3
+    num_head = 1
     attention_out = layers.Attention(embedding_size=embedding_size, attention_size=attention_size, num_head=num_head)(sparse_embeddings)
     nn_logits = tf.reshape(attention_out, shape=[-1, num_head * feature_size * attention_size])
     nn_logits = common_layer.get_nn_layers(nn_logits, dims=[1])

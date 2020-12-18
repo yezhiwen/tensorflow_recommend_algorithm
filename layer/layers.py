@@ -398,7 +398,6 @@ class PNN(tf.keras.layers.Layer):
         else:
             raise Exception("PNN mode is not in [0, 1]")
 
-
 class Attention(tf.keras.layers.Layer):
 
     def __init__(self, embedding_size, attention_size, num_head=1, **kwargs):
@@ -475,4 +474,50 @@ class Attention(tf.keras.layers.Layer):
         output = tf.concat(output, axis=1)
         return output
 
+class DCN(tf.keras.layers.Layer):
 
+    def __init__(self, layer_num, l2_reg=0, **kwargs):
+        self.l2_reg = l2_reg
+        self.layer_num = layer_num
+        super(DCN, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+
+        dim = int(input_shape[-1])
+
+        self.kernels = [
+            self.add_weight(
+                name='kernel' + str(i),
+                shape=(dim, 1),
+                initializer=tf.keras.initializers.glorot_normal(),
+                regularizer=tf.keras.regularizers.l2(self.l2_reg),
+                trainable=True
+            )
+            for i in range(self.layer_num)
+        ]
+        self.bias = [self.add_weight(name='bias' + str(i),
+                                     shape=(dim, 1),
+                                     initializer=tf.python.keras.initializers.Zeros(),
+                                     trainable=True) for i in range(self.layer_num)]
+
+    def call(self, inputs, **kwargs):
+
+        # batch_size, embedding_size, 1
+        x_0 = tf.expand_dims(inputs, axis=2)
+
+        # batch_size, embedding_size, 1
+        x_l = x_0
+        for i in range(self.layer_num):
+
+            # (batch_size, embedding_size, 1) * (embedding_size, 1) -> (batch_size, 1, 1)
+            xl_w = tf.tensordot(x_l, self.kernels[i], axes=(1, 0))
+
+            # batch_size, embedding_size, 1
+            dot_ = tf.matmul(x_0, xl_w)
+
+            # batch_size, embedding_size, 1
+            x_l = dot_ + self.bias[i] + x_l
+
+        # batch_size, embedding_size
+        x_l = tf.squeeze(x_l, axis=2)
+        return x_l

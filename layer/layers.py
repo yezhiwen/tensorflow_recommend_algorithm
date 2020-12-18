@@ -399,4 +399,80 @@ class PNN(tf.keras.layers.Layer):
             raise Exception("PNN mode is not in [0, 1]")
 
 
+class Attention(tf.keras.layers.Layer):
+
+    def __init__(self, embedding_size, attention_size, num_head=1, **kwargs):
+
+        self.num_head = num_head
+        self.embedding_size = embedding_size
+        self.attention_size = attention_size
+        super(Attention, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+
+        self.Wqs = []
+        self.Wks = []
+        self.Wvs = []
+        for i in range(self.num_head):
+            self.Wqs.append(
+                self.add_weight(
+                    name='Wq'+str(i),
+                    shape=(self.embedding_size, self.attention_size),
+                    initializer=tf.keras.initializers.glorot_normal(),
+                    trainable=True
+                )
+            )
+
+            self.Wks.append(
+                self.add_weight(
+                    name='Wk'+str(i),
+                    shape=(self.embedding_size, self.attention_size),
+                    initializer=tf.keras.initializers.glorot_normal(),
+                    trainable=True
+                )
+            )
+
+            self.Wvs.append(
+                self.add_weight(
+                    name='Wv'+str(i),
+                    shape=(self.embedding_size, self.attention_size),
+                    initializer=tf.keras.initializers.glorot_normal(),
+                    trainable=True
+                )
+            )
+
+    def call(self, inputs, **kwargs):
+
+        # list: [batch_size, embedding_size] , size=feature_size
+        x = inputs
+        x = [tf.expand_dims(each, axis=1) for each in x]
+
+        # batch_size, feature_size, embedding_size
+        x = tf.concat(x, axis=1)
+
+        output = []
+        for i in range(self.num_head):
+            # batch_size, feature_size, attention_size
+            q = tf.matmul(x, self.Wqs[i])
+            k = tf.matmul(x, self.Wks[i])
+            v = tf.matmul(x, self.Wvs[i])
+
+            # batch_size, attention_size, feature_size
+            k = tf.transpose(k, [0, 2, 1])
+
+            # batch_size, feature_size, feature_size
+            score = tf.matmul(q, k)
+            score = score / (self.attention_size ** 0.5)
+
+            # batch_size, feature_size, feature_size
+            score = tf.nn.softmax(score)
+
+            # batch_size, feature_size, attention_size
+            score = tf.matmul(score, v)
+
+            output.append(score)
+
+        output = tf.concat(output, axis=1)
+        return output
+
 
